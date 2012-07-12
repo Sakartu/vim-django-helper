@@ -1,0 +1,51 @@
+#!/usr/bin/python
+"""
+djvim: A small wrapper around vim to help set up environment variables to open
+django files
+"""
+
+import subprocess
+import sys
+import os
+
+__author__ = 'Peter Wagenaar'
+
+
+def find_file(name, path):
+    '''
+    Try to find a file with a specified name, searching through the given path,
+    recursively
+    '''
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+    return None
+
+
+def run_vim(ppath, project):
+    '''
+    Start vim with a new environment, to support django.db completion
+    '''
+    env = os.environ.copy()
+    env['PYTHONPATH'] = env.get('PYTHONPATH', '') + os.pathsep + ppath
+    env['DJANGO_SETTINGS_MODULE'] = project + '.settings'
+    cmd = ['vim']
+    cmd.extend(sys.argv[1:])
+    subprocess.call(cmd, env=env)
+    sys.exit()
+
+rest = os.path.abspath(os.getcwd())
+while rest != '/':
+    rest = os.path.split(rest)[0]
+    manage = find_file('manage.py', rest)
+    if not manage:
+        continue
+    ppath = os.path.dirname(manage)
+    settings = find_file('settings.py', ppath)
+    if not settings:
+        continue
+    project = os.path.basename(os.path.dirname(settings))
+    run_vim(ppath, project)
+
+print u'Could not find manage.py or settings.py, are you anywhere near a '
+'django project?'
